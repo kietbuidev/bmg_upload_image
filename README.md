@@ -12,4 +12,4 @@ Sao chép `.env.example` thành `.env` (local) và điền:
 ```bash
 npm i
 npm run dev
-# mở http://localhost:8080 để test form
+# mở http://localhost:8080/docs để test form
