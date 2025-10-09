@@ -1,7 +1,13 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
+import multer from "multer";
 import streamifier from "streamifier";
 import cloudinary from "../lib/cloudinary.js";
-import { uploadSingle, uploadMultiple } from "../middlewares/upload.js";
+import {
+  uploadSingle,
+  uploadMultiple,
+  maxUploadFiles,
+  maxUploadFileSizeMb
+} from "../middlewares/upload.js";
 
 const router = Router();
 
@@ -109,5 +115,31 @@ router.delete("/delete/:publicId", async (req: Request, res: Response) => {
       .json({ message: "Delete failed", error: error?.message || "Unknown error" });
   }
 });
+
+router.use(
+  (err: unknown, _req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof multer.MulterError) {
+      let message = err.message;
+      if (err.code === "LIMIT_FILE_SIZE") {
+        message = `File too large. Max size is ${maxUploadFileSizeMb}MB per file`;
+      } else if (err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE") {
+        message = `Too many files uploaded. Max allowed is ${maxUploadFiles}`;
+      }
+
+      return res.status(400).json({
+        message,
+        code: err.code
+      });
+    }
+
+    if (err instanceof Error && err.message === "Unsupported file type") {
+      return res.status(400).json({
+        message: err.message
+      });
+    }
+
+    return next(err);
+  }
+);
 
 export default router;
